@@ -1,0 +1,9 @@
+# Ignore everything
+/*
+
+# Except these ones
+!.gitignore
+!README.md
+
+# And sources
+!src/
