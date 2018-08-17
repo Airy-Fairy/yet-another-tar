@@ -6,46 +6,62 @@ Parser::Parser(int argc, char** argv)
     if (argc == 2)
     {
         if (strcmp(argv[1], "-h") == 0)
-            m_action = HELP;
+            m_action = Action::Help;
         else
-            m_action = ERROR;
+            m_action = Action::Error;
         return;
     }
 
     if (argc < 3)
     {
-        m_action = TOO_FEW_ARGS;
+        m_action = Action::TooFewArgs;
         return;
     }
 
     if (strcmp(argv[1], "-a") == 0)
     {
-        m_action = ARCHIVE;
+        m_action = Action::Archive;
     }
     else if (strcmp(argv[1], "-x") == 0)
     {
-        m_action = EXTRACT;
+        m_action = Action::Extract;
     }
     else if (strcmp(argv[1], "-l") == 0)
     {
-        m_action = LIST;
+        m_action = Action::List;
+    }
+    else if (strcmp(argv[1], "-i") == 0)
+    {
+        m_action = Action::Insert;
+    }
+    else
+    {
+        m_action = Action::Error;
+        return;
     }
 
     switch (m_action)
     {
-    case ARCHIVE:
-    case EXTRACT:
+    case Action::Archive:
+    case Action::Extract:
         m_inputPath = argv[2];
         if (argc == 5)
         {
             if (strcmp(argv[3], "-o"))
-                m_action = ERROR;
+                m_action = Action::Error;
             else
                 m_outputPath = argv[4];
         }
+        else
+        {
+            m_outputPath = ".";
+        }
         break;
-    case LIST:
+    case Action::List:
         m_inputPath = argv[2];
+        break;
+    case Action::Insert:
+        // TODO
         break;
     default:
         break;
