@@ -5,13 +5,18 @@
 
 class Archiver
 {
+
 public:
+
     Archiver();
     ~Archiver();
 
-    int archive(const std::string& inputPath, const std::string& archivePath) const;
-    int extract(const std::string& archivePath, const std::string& outputPath) const;
-    int list(const std::string& archivePath) const;
+    int archive(const std::string& sInputPath, const std::string& sArchivePath) const;
+    int extract(const std::string& sArchivePath, const std::string& sOutputPath) const;
+    int list(const std::string& sArchivePath) const;
+
+private:
+    static const int isDirFlag = 1;
 };
 
 #endif // ARCHIVER_H
