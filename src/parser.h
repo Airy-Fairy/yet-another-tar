@@ -6,14 +6,15 @@
 class Parser
 {
 public:
-    enum Action : int
+    enum class Action
     {
-        HELP,
-        ARCHIVE,
-        EXTRACT,
-        LIST,
-        TOO_FEW_ARGS,
-        ERROR
+        Help,
+        Archive,
+        Extract,
+        List,
+        Insert,
+        TooFewArgs,
+        Error
     };
 
     Parser(int argc, char** argv);

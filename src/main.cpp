@@ -12,42 +12,62 @@ int main(int argc, char** argv)
 
     auto action = parser.action();
 
-    if (action == Parser::Action::HELP)
+    // TODO: handle errors
+
+    if (action == Parser::Action::Help)
     {
+        // TODO
         cout << "Help message is here" << endl;
     }
-    else if (action == Parser::Action::ARCHIVE)
+    else if (action == Parser::Action::Archive)
     {
+        cout << "Archiving data..." << endl;
         auto inputPath = parser.getInputPath();
+        auto archivePath = parser.getOutputPath();
+        Archiver archiver;
+        archiver.archive(inputPath, archivePath);
+    }
+    else if (action == Parser::Action::Extract)
+    {
+        cout << "Extracting data..." << endl;
+        auto archivePath = parser.getInputPath();
         auto outputPath = parser.getOutputPath();
         Archiver archiver;
-        archiver.archive(inputPath, outputPath);
+        archiver.extract(archivePath, outputPath);
     }
-    else if (action == Parser::Action::EXTRACT)
+    else if (action == Parser::Action::List)
     {
-        auto inputPath = parser.getInputPath();
-        auto outputPath = parser.getOutputPath();
+        auto archivePath = parser.getInputPath();
         Archiver archiver;
-        archiver.extract(inputPath, outputPath);
+        std::vector<Archiver::objInfo> objList;
+        archiver.list(archivePath, objList);
+        
+        for (auto obj : objList)
+        {
+            if (obj.isDir)
+                cout << "<DIR>\t" << obj.name << endl;
+            else
+                cout << obj.size << "\t" << obj.name << endl;
+        }
     }
-    else if (action == Parser::Action::LIST)
+    else if (action == Parser::Action::Insert)
     {
+        cout << "Inserting data..." << endl;
         auto inputPath = parser.getInputPath();
+        auto archivePath = parser.getOutputPath();
         Archiver archiver;
-        archiver.list(inputPath);
+        archiver.insert(inputPath, archivePath);
     }
-    else if (action == Parser::Action::TOO_FEW_ARGS)
+    else if (action == Parser::Action::TooFewArgs)
     {
         cout << "Error: Too few arguments!" << endl
-            << "Usage: yat -axl input_path [-o output_path]" << endl
+            << "Usage: yat -axli (input_path | archive) [-o (output_path | archive)]" << endl
             << "To get help use: yat -h" << endl;
     }
-    else if (action == Parser::Action::ERROR)
+    else if (action == Parser::Action::Error)
     {
         cout << "Error: unknown!" << endl << "Please, refer to help: yat -h";
     }
-
-    system("pause");
 
     return 0;
 }
