@@ -1,4 +1,5 @@
 #include "parser.h"
+#include <cstring>
 
 /**
  * @brief      This constructor handles cmd line arguments

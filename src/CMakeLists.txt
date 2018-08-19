@@ -22,6 +22,10 @@ add_executable(${EXE_NAME}
     ${HEADERS}
 )
 
+if (UNIX)
+    target_link_libraries(${EXE_NAME} stdc++fs)
+endif()
+
 source_group("sources" FILES ${SOURCES})
 source_group("headers" FILES ${HEADERS})
 
