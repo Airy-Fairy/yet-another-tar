@@ -1,9 +1,6 @@
 #include "archiver.h"
 
 #include <fstream>
-#include <filesystem>
-
-namespace fs = std::experimental::filesystem;
 
 Archiver::Archiver()
 {
@@ -37,27 +34,27 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
 
     std::ofstream archiveStream(archivePath, std::ios_base::binary);
 
-    auto saveFileToArchive = [&archiveStream](fs::path p)
-    {
-        std::ifstream inputStream(p, std::ios_base::binary);
+    //auto saveFileToArchive = [&archiveStream](fs::path p)
+    //{
+    //    std::ifstream inputStream(p, std::ios_base::binary);
 
-        auto fileSize = fs::file_size(p);
+    //    auto fileSize = fs::file_size(p);
 
-        auto buffer = new char[fileSize];
-        inputStream.read(buffer, fileSize);
+    //    auto buffer = new char[fileSize];
+    //    inputStream.read(buffer, fileSize);
 
-        auto fileName = p.string();
-        auto nameLen = static_cast<short>(fileName.size());
-        nameLen = (nameLen << 1); // no flag
+    //    auto fileName = p.string();
+    //    auto nameLen = static_cast<short>(fileName.size());
+    //    nameLen = (nameLen << 1); // no flag
 
-        archiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
-        archiveStream.write(fileName.c_str(), fileName.size());
-        archiveStream.write(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
-        archiveStream.write(buffer, fileSize);
+    //    archiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
+    //    archiveStream.write(fileName.c_str(), fileName.size());
+    //    archiveStream.write(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
+    //    archiveStream.write(buffer, fileSize);
 
-        delete[] buffer;
-        inputStream.close();
-    };
+    //    delete[] buffer;
+    //    inputStream.close();
+    //};
 
     // Recursive in depth traverse of the input directory
     if (fs::is_directory(inputPath))
@@ -68,22 +65,25 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
 
             if (fs::is_directory(p))
             {
-                auto dirName = p.path().string();
-                auto pathLen = static_cast<short>(dirName.size());
-                pathLen = (pathLen << 1) | isDirFlag; // is directory flag
+                //auto dirName = p.path().string();
+                //auto pathLen = static_cast<short>(dirName.size());
+                //pathLen = (pathLen << 1) | isDirFlag; // is directory flag
 
-                archiveStream.write(reinterpret_cast<char*>(&pathLen), sizeof(pathLen));
-                archiveStream.write(dirName.c_str(), dirName.size());
+                //archiveStream.write(reinterpret_cast<char*>(&pathLen), sizeof(pathLen));
+                //archiveStream.write(dirName.c_str(), dirName.size());
+                insertDir(archiveStream, p.path());
             }
             else
             {
-                saveFileToArchive(p.path());
+                insertFile(archiveStream, p.path());
+                //saveFileToArchive(p.path());
             }
         }
     }
     else
     {
-        saveFileToArchive(inputPath);
+        insertFile(archiveStream, inputPath);
+        //saveFileToArchive(inputPath);
     }
 
     archiveStream.close();
@@ -160,7 +160,7 @@ int Archiver::list(const std::string & sArchivePath) const
     auto archivePath = fs::path(sArchivePath);
 
     // Check path existence
-    if (!fs::exists(archivePath))
+    if (!fs::exists(archivePath) || fs::is_directory(archivePath))
         return 1;
 
     std::ifstream archiveStream(archivePath, std::ios_base::binary);
@@ -196,4 +196,43 @@ int Archiver::list(const std::string & sArchivePath) const
     archiveStream.close();
 
     return 0;
+}
+
+int Archiver::insert(const std::string & sInputPath, const std::string & sArchivePath) const
+{
+
+
+    return 0;
+}
+
+void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePath) const
+{
+    std::ifstream inputStream(filePath, std::ios_base::binary);
+
+    auto fileSize = fs::file_size(filePath);
+
+    auto buffer = new char[fileSize];
+    inputStream.read(buffer, fileSize);
+
+    auto fileName = filePath.string();
+    auto nameLen = static_cast<short>(fileName.size());
+    nameLen = (nameLen << 1); // no flag
+
+    archiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
+    archiveStream.write(fileName.c_str(), fileName.size());
+    archiveStream.write(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
+    archiveStream.write(buffer, fileSize);
+
+    delete[] buffer;
+    inputStream.close();
+}
+
+void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath) const
+{
+    auto dirName = dirPath.string();
+    auto pathLen = static_cast<short>(dirName.size());
+    pathLen = (pathLen << 1) | isDirFlag; // is directory flag
+
+    archiveStream.write(reinterpret_cast<char*>(&pathLen), sizeof(pathLen));
+    archiveStream.write(dirName.c_str(), dirName.size());
 }
