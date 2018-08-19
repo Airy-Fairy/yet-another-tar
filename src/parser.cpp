@@ -3,6 +3,7 @@
 
 Parser::Parser(int argc, char** argv)
 {
+    // If there's 2 arguments then it's help option
     if (argc == 2)
     {
         if (strcmp(argv[1], "-h") == 0)
@@ -12,12 +13,14 @@ Parser::Parser(int argc, char** argv)
         return;
     }
 
+    // Not help option and args < 3 -> error
     if (argc < 3)
     {
         m_action = Action::TooFewArgs;
         return;
     }
 
+    // Parse 2nd argument
     if (strcmp(argv[1], "-a") == 0)
     {
         m_action = Action::Archive;
@@ -44,6 +47,7 @@ Parser::Parser(int argc, char** argv)
     {
     case Action::Archive:
     case Action::Extract:
+    case Action::Insert:
         m_inputPath = argv[2];
         if (argc == 5)
         {
@@ -59,9 +63,6 @@ Parser::Parser(int argc, char** argv)
         break;
     case Action::List:
         m_inputPath = argv[2];
-        break;
-    case Action::Insert:
-        // TODO
         break;
     default:
         break;
