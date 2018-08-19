@@ -155,7 +155,7 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
     return 0;
 }
 
-int Archiver::list(const std::string & sArchivePath) const
+int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objList) const
 {
     auto archivePath = fs::path(sArchivePath);
 
@@ -167,6 +167,10 @@ int Archiver::list(const std::string & sArchivePath) const
 
     while (archiveStream.peek() != EOF)
     {
+        objInfo object;
+        object.size = -1;
+        object.isDir = true;
+
         short nameLen;
         archiveStream.read(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
 
@@ -181,14 +185,23 @@ int Archiver::list(const std::string & sArchivePath) const
             archiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
             archiveStream.seekg(fileSize, archiveStream.cur);
 
-            std::cout << fileSize << "\t";
-        }
-        else
-        {
-            std::cout << "<DIR>\t";
-        }
+            //std::cout << fileSize << "\t";
 
-        std::cout << nameBuffer << std::endl;
+            object.size = fileSize;
+            object.isDir = false;
+        }
+        //else
+        //{
+        //    std::cout << "<DIR>\t";
+
+        //    object.isDir = true;
+        //}
+
+        //std::cout << nameBuffer << std::endl;
+
+        // Save object to the list
+        object.name = nameBuffer;
+        objList.push_back(object);
 
         delete[] nameBuffer;
     }

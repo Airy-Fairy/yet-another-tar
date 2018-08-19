@@ -23,32 +23,45 @@ int main(int argc, char** argv)
     {
         cout << "Archiving data..." << endl;
         auto inputPath = parser.getInputPath();
-        auto outputPath = parser.getOutputPath();
+        auto archivePath = parser.getOutputPath();
         Archiver archiver;
-        archiver.archive(inputPath, outputPath);
+        archiver.archive(inputPath, archivePath);
     }
     else if (action == Parser::Action::Extract)
     {
         cout << "Extracting data..." << endl;
-        auto inputPath = parser.getInputPath();
+        auto archivePath = parser.getInputPath();
         auto outputPath = parser.getOutputPath();
         Archiver archiver;
-        archiver.extract(inputPath, outputPath);
+        archiver.extract(archivePath, outputPath);
     }
     else if (action == Parser::Action::List)
     {
-        auto inputPath = parser.getInputPath();
+        auto archivePath = parser.getInputPath();
         Archiver archiver;
-        archiver.list(inputPath);
+        std::vector<Archiver::objInfo> objList;
+        archiver.list(archivePath, objList);
+        
+        for (auto obj : objList)
+        {
+            if (obj.isDir)
+                cout << "<DIR>\t" << obj.name << endl;
+            else
+                cout << obj.size << "\t" << obj.name << endl;
+        }
     }
     else if (action == Parser::Action::Insert)
     {
-        // TODO
+        cout << "Inserting data..." << endl;
+        auto inputPath = parser.getInputPath();
+        auto archivePath = parser.getOutputPath();
+        Archiver archiver;
+        archiver.insert(inputPath, archivePath);
     }
     else if (action == Parser::Action::TooFewArgs)
     {
         cout << "Error: Too few arguments!" << endl
-            << "Usage: yat -axli (input_path | archive) [-o (output_path | input_path)]" << endl
+            << "Usage: yat -axli (input_path | archive) [-o (output_path | archive)]" << endl
             << "To get help use: yat -h" << endl;
     }
     else if (action == Parser::Action::Error)
