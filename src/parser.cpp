@@ -1,6 +1,11 @@
 #include "parser.h"
 
-
+/**
+ * @brief      This constructor handles cmd line arguments
+ *
+ * @param[in]  argc  Number of cmd line args
+ * @param      argv  Cmd line args
+ */
 Parser::Parser(int argc, char** argv)
 {
     // If there's 2 arguments then it's help option
@@ -20,7 +25,7 @@ Parser::Parser(int argc, char** argv)
         return;
     }
 
-    // Parse 2nd argument
+    // Parse 2nd argument and put appropriate Action into m_action
     if (strcmp(argv[1], "-a") == 0)
     {
         m_action = Action::Archive;
@@ -74,16 +79,19 @@ Parser::~Parser()
 {
 }
 
+// Returns m_action derived from parsing cmd line args
 Parser::Action Parser::action() const
 {
     return m_action;
 }
 
+// Returns input path
 std::string Parser::getInputPath() const
 {
     return m_inputPath;
 }
 
+// Returns output path
 std::string Parser::getOutputPath() const
 {
     return m_outputPath;

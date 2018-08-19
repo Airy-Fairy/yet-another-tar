@@ -13,7 +13,14 @@ Archiver::~Archiver()
 {
 }
 
-
+/**
+ * @brief      Archives files and directories from sInputPath
+ *
+ * @param[in]  sInputPath    The input path string
+ * @param[in]  sArchivePath  The archive path string
+ *
+ * @return     0 if success and error code otherwise
+ */
 int Archiver::archive(const std::string & sInputPath, const std::string & sArchivePath)
 {
     auto inputPath = fs::path(sInputPath);
@@ -30,7 +37,6 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
     // Check path existence
     if (!fs::exists(inputPath))
         return 1;
-
 
     if (fs::is_directory(archivePath)) {
         archivePath = archivePath / inputPath.filename();
@@ -73,7 +79,14 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
     return 0;
 }
 
-
+/**
+ * @brief      Extracts data from archive sArchivePath
+ *
+ * @param[in]  sArchivePath  The archive path string
+ * @param[in]  sOutputPath   The output path string
+ *
+ * @return     0 if success and error code otherwise
+ */
 int Archiver::extract(const std::string & sArchivePath, const std::string & sOutputPath) const
 {
     auto archivePath = fs::path(sArchivePath);
@@ -138,7 +151,14 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
     return 0;
 }
 
-
+/**
+ * @brief      { function_description }
+ *
+ * @param[in]  sArchivePath  The archive path string
+ * @param      objList       The vector of objInfo structs, modified during execution
+ *
+ * @return     0 if success and error code otherwise
+ */
 int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objList) const
 {
     auto archivePath = fs::path(sArchivePath);
@@ -169,19 +189,9 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
             archiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
             archiveStream.seekg(fileSize, archiveStream.cur);
 
-            //std::cout << fileSize << "\t";
-
             object.size = fileSize;
             object.isDir = false;
         }
-        //else
-        //{
-        //    std::cout << "<DIR>\t";
-
-        //    object.isDir = true;
-        //}
-
-        //std::cout << nameBuffer << std::endl;
 
         // Save object to the list
         object.name = nameBuffer;
@@ -195,7 +205,14 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
     return 0;
 }
 
-
+/**
+ * @brief      Inserts new objects from sInputPath into archive sArchivePath
+ *
+ * @param[in]  sInputPath    The input path string
+ * @param[in]  sArchivePath  The archive path string
+ *
+ * @return     0 if success and error code otherwise
+ */
 int Archiver::insert(const std::string & sInputPath, const std::string & sArchivePath)
 {
     auto inputPath = fs::path(sInputPath);
@@ -301,7 +318,12 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
     return 0;
 }
 
-
+/**
+ * @brief      Inserts a file into archive
+ *
+ * @param      archiveStream  The archive stream
+ * @param[in]  filePath       The file path
+ */
 void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePath) const
 {
     std::ifstream inputStream(filePath, std::ios_base::binary);
@@ -327,7 +349,12 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
     inputStream.close();
 }
 
-
+/**
+ * @brief      Inserts a directory into archive
+ *
+ * @param      archiveStream  The archive stream
+ * @param[in]  dirPath        The directory path
+ */
 void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath) const
 {
     // dirName <- relative path, i.e. without m_sRootPath
