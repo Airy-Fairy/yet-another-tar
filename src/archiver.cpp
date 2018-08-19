@@ -1,7 +1,7 @@
 #include "archiver.h"
 
 #include <fstream>
-#include <unordered_map>
+#include <unordered_set>
 
 
 Archiver::Archiver()
@@ -211,7 +211,8 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
     std::ifstream oldArchiveStream(sArchivePath, std::ios_base::binary);
     std::ofstream newArchiveStream(sArchivePath + ".tmp", std::ios_base::binary | std::ios_base::app);
 
-    std::unordered_map<std::string, bool> newObjects; // maps name to is directory
+    // Saves new object relative paths
+    std::unordered_set<std::string> newObjects;
 
     // Recursive in depth traverse of the input directory
     if (fs::is_directory(inputPath))
@@ -225,12 +226,12 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
             if (fs::is_directory(p))
             {
                 insertDir(newArchiveStream, p.path());
-                newObjects[objName] = true;
+                newObjects.insert(objName);
             }
             else
             {
                 insertFile(newArchiveStream, p.path());
-                newObjects[objName] = false;
+                newObjects.insert(objName);
             }
         }
     }
@@ -240,7 +241,7 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         auto fileName = sInputPath.substr(m_sRootPath.length(), sInputPath.length() - m_sRootPath.length());
 
         insertFile(newArchiveStream, inputPath);
-        newObjects[fileName] = false;
+        newObjects.insert(fileName);
     }
 
     // Actual inserting
