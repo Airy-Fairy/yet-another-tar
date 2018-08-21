@@ -48,13 +48,17 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
 
     std::ofstream archiveStream(archivePath, std::ios_base::binary);
 
-    if (fs::is_directory(archivePath)) {
-        insertDir(archiveStream, inputPath);
-    }
+    //if (fs::is_directory(archivePath)) {
+    //    insertDir(archiveStream, inputPath);
+    //}
+
+    std::cout << inputPath << std::endl;
 
     // Recursive in depth traverse of the input directory
     if (fs::is_directory(inputPath))
     {
+        insertDir(archiveStream, inputPath);
+
         for (auto& p : fs::recursive_directory_iterator(inputPath))
         {
             std::cout << p << std::endl;
@@ -116,13 +120,18 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
         archiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
 
+        DWORD attributes;
+        archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
+
+        auto objPath = outputPath / fs::path(nameBuffer);
+
         if (nameLen & isDirFlag)
         {
-            fs::create_directories(outputPath / fs::path(nameBuffer));
+            fs::create_directories(objPath);
         }
         else
         {
-            std::ofstream outputStream(outputPath / fs::path(nameBuffer), std::ios_base::binary);
+            std::ofstream outputStream(objPath, std::ios_base::binary);
 
             uintmax_t fileSize;
             archiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
@@ -141,7 +150,10 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
             outputStream.close();
         }
 
-        std::cout << outputPath / fs::path(nameBuffer) << std::endl;
+        // Restore attributes
+        setObjectAttributes(objPath.string().c_str(), attributes);
+
+        std::cout << objPath << std::endl;
 
         delete[] nameBuffer;
     }
@@ -181,6 +193,9 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
         auto nameBuffer = new char[(nameLen >> 1) + 1];
         archiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
+
+        DWORD attributes;
+        archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         // If it's a file - skip its content
         if (!(nameLen & isDirFlag))
@@ -271,11 +286,15 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         oldArchiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
 
+        DWORD attributes;
+        oldArchiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
+
         // If current object doesn't contain in new objects - write it
         if (newObjects.find(nameBuffer) == newObjects.end())
         {
             newArchiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
             newArchiveStream.write(nameBuffer, nameLen >> 1);
+            newArchiveStream.write(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
             // If it's not directory
             if (!(nameLen & isDirFlag))
@@ -340,8 +359,19 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
     auto nameLen = static_cast<short>(fileName.size());
     nameLen = (nameLen << 1); // no flag
 
+    auto attributes = getObjectAttributes(sFilePath.c_str());
+
+    /*
+    * The order of writing a file information is following:
+    *   1. File name length
+    *   2. File name
+    *   3. File attributes
+    *   4. File size
+    *   5. File content
+    */
     archiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
     archiveStream.write(fileName.c_str(), fileName.size());
+    archiveStream.write(reinterpret_cast<char*>(&attributes), sizeof(attributes));
     archiveStream.write(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
     archiveStream.write(buffer, fileSize);
 
@@ -364,6 +394,52 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
     auto pathLen = static_cast<short>(dirName.size());
     pathLen = (pathLen << 1) | isDirFlag; // is directory flag
 
+    auto attributes = getObjectAttributes(sDirPath.c_str());
+
+    /*
+    * The order of writing a directory information is following:
+    *   1. Directory name length
+    *   2. Directory name
+    *   3. Directory attributes
+    */
     archiveStream.write(reinterpret_cast<char*>(&pathLen), sizeof(pathLen));
     archiveStream.write(dirName.c_str(), dirName.size());
+    archiveStream.write(reinterpret_cast<char*>(&attributes), sizeof(attributes));
+}
+
+/**
+ * @brief      Gets the object attributes.
+ *
+ * @param[in]  path  The path
+ *
+ * @return     The object attributes.
+ */
+DWORD Archiver::getObjectAttributes(const char * path) const
+{
+    DWORD attributes = 0;
+
+#ifdef WIN32
+    attributes = GetFileAttributes(path);
+#elif UNIX
+    // TODO
+#endif
+
+    return attributes;
+}
+
+/**
+ * @brief      Sets the object attributes.
+ *
+ * @param[in]  path        The path
+ * @param[in]  attributes  The attributes
+ *
+ * @return     Returns the return value of corresponding attributes setting function
+ */
+BOOL Archiver::setObjectAttributes(const char* path, const DWORD & attributes) const
+{
+#ifdef WIN32
+    return SetFileAttributes(path, attributes);
+#elif UNIX
+    // TODO
+#endif
 }

@@ -4,6 +4,12 @@
 #include <iostream>
 #include <experimental/filesystem>
 
+#ifdef WIN32
+#include <Windows.h>
+#elif
+// TODO
+#endif
+
 namespace fs = std::experimental::filesystem;
 
 class Archiver
@@ -28,6 +34,8 @@ public:
 private:
     void insertFile(std::ofstream& archiveStream, const fs::path& filePath) const;
     void insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
+    DWORD getObjectAttributes(const char* path) const;
+    BOOL setObjectAttributes(const char* path, const DWORD& attributes) const;
 
     // TODO: objList sorting function: folder1, it's files, folder2, it's files, etc.
 
