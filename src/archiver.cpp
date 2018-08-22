@@ -6,10 +6,6 @@
 #ifdef WIN32
 #include <Windows.h>
 #elif __linux__
-#include <errno.h>
-#include <string.h>
-
-#include <sys/types.h>
 #include <sys/stat.h>
 #endif
 
@@ -34,7 +30,7 @@ Archiver::~Archiver()
  *
  * @return     0 if success and error code otherwise
  */
-int Archiver::archive(const std::string & sInputPath, const std::string & sArchivePath)
+Archiver::ErrorCode Archiver::archive(const std::string & sInputPath, const std::string & sArchivePath)
 {
     auto inputPath = fs::path(sInputPath);
     auto archivePath = fs::path(sArchivePath);
@@ -48,8 +44,13 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
     }
 
     // Check path existence
-    if (!fs::exists(inputPath))
-        return 1;
+    if (!fs::exists(inputPath)) {
+        return ErrorCode::DoesNotExist;
+    }
+
+    if (!fs::exists(archivePath.parent_path())) {
+        return ErrorCode::DoesNotExist;
+    }
 
     if (fs::is_directory(archivePath)) {
         archivePath = archivePath / inputPath.filename();
@@ -61,9 +62,9 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
 
     std::ofstream archiveStream(archivePath, std::ios_base::binary);
 
-    //if (fs::is_directory(archivePath)) {
-    //    insertDir(archiveStream, inputPath);
-    //}
+    if (!archiveStream.good()) {
+        return ErrorCode::OFStreamErr;
+    }
 
     std::cout << inputPath << std::endl;
 
@@ -93,7 +94,7 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
 
     archiveStream.close();
 
-    return 0;
+    return ErrorCode::Success;
 }
 
 /**
@@ -104,25 +105,28 @@ int Archiver::archive(const std::string & sInputPath, const std::string & sArchi
  *
  * @return     0 if success and error code otherwise
  */
-int Archiver::extract(const std::string & sArchivePath, const std::string & sOutputPath) const
+Archiver::ErrorCode Archiver::extract(const std::string & sArchivePath, const std::string & sOutputPath) const
 {
     auto archivePath = fs::path(sArchivePath);
     auto outputPath = fs::path(sOutputPath);
 
     // Check path existence
-    if (!fs::exists(archivePath))
-        return 1;
+    if (!fs::exists(archivePath)) {
+        return ErrorCode::DoesNotExist;
+    }
 
     if (!fs::exists(outputPath))
     {
-        if (!fs::create_directory(outputPath))
-            return 1;
+        if (!fs::create_directory(outputPath)) {
+            return ErrorCode::CreateDirErr;
+        }
     }
 
-    //if (outputPath.parent_path() != "" && !fs::exists(outputPath.parent_path()))
-    //    return 1;
-
     std::ifstream archiveStream(archivePath, std::ios_base::binary);
+
+    if (!archiveStream.good()) {
+        return ErrorCode::IFStreamErr;
+    }
 
     while (archiveStream.peek() != EOF)
     {
@@ -175,7 +179,7 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
 
     archiveStream.close();
 
-    return 0;
+    return ErrorCode::Success;
 }
 
 /**
@@ -186,15 +190,24 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
  *
  * @return     0 if success and error code otherwise
  */
-int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objList) const
+Archiver::ErrorCode Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objList) const
 {
     auto archivePath = fs::path(sArchivePath);
 
     // Check path existence
-    if (!fs::exists(archivePath) || fs::is_directory(archivePath))
-        return 1;
+    if (!fs::exists(archivePath)) {
+        return ErrorCode::DoesNotExist;
+    }
+
+    if (fs::is_directory(archivePath)) {
+        return ErrorCode::IsNotArchive;
+    }
 
     std::ifstream archiveStream(archivePath, std::ios_base::binary);
+
+    if (!archiveStream.good()) {
+        return ErrorCode::IFStreamErr;
+    }
 
     while (archiveStream.peek() != EOF)
     {
@@ -232,7 +245,7 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
 
     archiveStream.close();
 
-    return 0;
+    return ErrorCode::Success;
 }
 
 /**
@@ -243,10 +256,19 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
  *
  * @return     0 if success and error code otherwise
  */
-int Archiver::insert(const std::string & sInputPath, const std::string & sArchivePath)
+Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::string & sArchivePath)
 {
     auto inputPath = fs::path(sInputPath);
 
+    // Check path existence
+    if (!fs::exists(inputPath)) {
+        return ErrorCode::DoesNotExist;
+    }
+
+    if (fs::exists(fs::path(sArchivePath))) {
+        return ErrorCode::DoesNotExist;
+    }
+    
     if (sInputPath != ".") {
         if (inputPath.parent_path().string() != "")
             m_sRootPath = inputPath.parent_path().string() + "\\";
@@ -257,6 +279,14 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
 
     std::ifstream oldArchiveStream(sArchivePath, std::ios_base::binary);
     std::ofstream newArchiveStream(sArchivePath + ".tmp", std::ios_base::binary | std::ios_base::app);
+
+    if (!oldArchiveStream.good()) {
+        return ErrorCode::IFStreamErr;
+    }
+
+    if (!newArchiveStream.good()) {
+        return ErrorCode::OFStreamErr;
+    }
 
     // Saves new object relative paths
     std::unordered_set<std::string> newObjects;
@@ -349,7 +379,7 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
     std::remove(sArchivePath.c_str());
     std::rename((sArchivePath + ".tmp").c_str(), sArchivePath.c_str());
 
-    return 0;
+    return ErrorCode::Success;
 }
 
 /**
@@ -358,9 +388,13 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
  * @param      archiveStream  The archive stream
  * @param[in]  filePath       The file path
  */
-void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePath) const
+Archiver::ErrorCode Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePath) const
 {
     std::ifstream inputStream(filePath, std::ios_base::binary);
+
+    if (!inputStream.good()) {
+        return ErrorCode::IFStreamErr;
+    }
 
     auto fileSize = fs::file_size(filePath);
 
@@ -375,6 +409,9 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
 
     attr_t attributes;
     auto ret = getObjectAttributes(sFilePath.c_str(), &attributes);
+    if (ret != static_cast<int>(ErrorCode::Success)) {
+        return ErrorCode::GetAttrsErr;
+    }
 
     /*
     * The order of writing a file information is following:
@@ -392,6 +429,8 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
 
     delete[] buffer;
     inputStream.close();
+
+    return ErrorCode::Success;
 }
 
 /**
@@ -400,7 +439,7 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
  * @param      archiveStream  The archive stream
  * @param[in]  dirPath        The directory path
  */
-void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath) const
+Archiver::ErrorCode Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath) const
 {
     // dirName <- relative path, i.e. without m_sRootPath
     auto sDirPath = dirPath.string();
@@ -410,6 +449,9 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
 
     attr_t attributes;
     auto ret = getObjectAttributes(sDirPath.c_str(), &attributes);
+    if (ret != static_cast<int>(ErrorCode::Success)) {
+        return ErrorCode::GetAttrsErr;
+    }
 
     /*
     * The order of writing a directory information is following:
@@ -420,6 +462,8 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
     archiveStream.write(reinterpret_cast<char*>(&pathLen), sizeof(pathLen));
     archiveStream.write(dirName.c_str(), dirName.size());
     archiveStream.write(reinterpret_cast<char*>(&attributes), sizeof(attributes));
+
+    return ErrorCode::Success;
 }
 
 /**
