@@ -129,16 +129,16 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
         short nameLen;
         archiveStream.read(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
 
-        auto nameBuffer = new char[(nameLen >> 1) + 1];
-        archiveStream.read(nameBuffer, nameLen >> 1);
-        nameBuffer[nameLen >> 1] = '\0';
+        auto nameBuffer = new char[nameLen + 1];
+        archiveStream.read(nameBuffer, nameLen);
+        nameBuffer[nameLen] = '\0';
 
         attr_t attributes;
         archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         auto objPath = outputPath / fs::path(nameBuffer);
 
-        if (nameLen & isDirFlag)
+        if (!isDir(attributes))
         {
             fs::create_directories(objPath);
         }
@@ -203,15 +203,15 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
         short nameLen;
         archiveStream.read(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
 
-        auto nameBuffer = new char[(nameLen >> 1) + 1];
-        archiveStream.read(nameBuffer, nameLen >> 1);
-        nameBuffer[nameLen >> 1] = '\0';
+        auto nameBuffer = new char[nameLen + 1];
+        archiveStream.read(nameBuffer, nameLen);
+        nameBuffer[nameLen] = '\0';
 
         attr_t attributes;
         archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         // If it's a file - skip its content
-        if (!(nameLen & isDirFlag))
+        if (!isDir(attributes))
         {
             uintmax_t fileSize;
             archiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
@@ -295,9 +295,9 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         short nameLen;
         oldArchiveStream.read(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
 
-        auto nameBuffer = new char[(nameLen >> 1) + 1];
-        oldArchiveStream.read(nameBuffer, nameLen >> 1);
-        nameBuffer[nameLen >> 1] = '\0';
+        auto nameBuffer = new char[nameLen + 1];
+        oldArchiveStream.read(nameBuffer, nameLen);
+        nameBuffer[nameLen] = '\0';
 
         attr_t attributes;
         oldArchiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
@@ -306,11 +306,11 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         if (newObjects.find(nameBuffer) == newObjects.end())
         {
             newArchiveStream.write(reinterpret_cast<char*>(&nameLen), sizeof(nameLen));
-            newArchiveStream.write(nameBuffer, nameLen >> 1);
+            newArchiveStream.write(nameBuffer, nameLen);
             newArchiveStream.write(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
             // If it's not directory
-            if (!(nameLen & isDirFlag))
+            if (!isDir(attributes))
             {
                 uintmax_t fileSize;
                 oldArchiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
@@ -332,7 +332,7 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         else
         {
             // If it's a file - skip its content
-            if (!(nameLen & isDirFlag))
+            if (!isDir(attributes))
             {
                 uintmax_t fileSize;
                 oldArchiveStream.read(reinterpret_cast<char*>(&fileSize), sizeof(fileSize));
@@ -370,7 +370,6 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
     auto fileName = sFilePath.substr(m_sRootPath.length(), sFilePath.length() - m_sRootPath.length());
 
     auto nameLen = static_cast<short>(fileName.size());
-    nameLen = (nameLen << 1); // no flag
 
     attr_t attributes;
     auto ret = getObjectAttributes(sFilePath.c_str(), &attributes);
@@ -406,7 +405,6 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
     auto dirName = sDirPath.substr(m_sRootPath.length(), sDirPath.length() - m_sRootPath.length());
 
     auto pathLen = static_cast<short>(dirName.size());
-    pathLen = (pathLen << 1) | isDirFlag; // is directory flag
 
     attr_t attributes;
     auto ret = getObjectAttributes(sDirPath.c_str(), &attributes);
@@ -462,4 +460,20 @@ int Archiver::setObjectAttributes(const char* path, const attr_t & attributes) c
 #elif __linux__
     return chmod(path, attributes);
 #endif
+}
+
+/**
+ * @brief      Determines if an object defined by attributes is a directory.
+ *
+ * @param[in]  attributes  The attributes
+ *
+ * @return     True if dir, False otherwise.
+ */
+bool Archiver::isDir(const attr_t& attributes) const
+{
+    #ifdef _WIN32
+        return (attributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY;
+    #elif __linux__
+        return static_cast<bool>(S_ISDIR(attributes));
+    #endif
 }

@@ -36,11 +36,12 @@ private:
     void insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
     int getObjectAttributes(const char* path, attr_t* attributes) const;
     int setObjectAttributes(const char* path, const attr_t& attributes) const;
+    bool isDir(const attr_t& attributes) const;
 
     // TODO: objList sorting function: folder1, it's files, folder2, it's files, etc.
 
     std::string m_sRootPath{};
-    static const int isDirFlag = 1; // TODO: Get rid of this crutch
+    // static const int isDirFlag = 1; // TODO: Get rid of this crutch
 };
 
 #endif // ARCHIVER_H
