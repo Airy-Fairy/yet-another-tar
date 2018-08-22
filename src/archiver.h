@@ -4,12 +4,6 @@
 #include <iostream>
 #include <experimental/filesystem>
 
-#ifdef WIN32
-#include <Windows.h>
-#elif
-// TODO
-#endif
-
 namespace fs = std::experimental::filesystem;
 
 class Archiver
@@ -23,6 +17,12 @@ public:
         bool isDir;
     };
 
+#ifdef WIN32
+    using attr_t = unsigned long;
+#elif __linux__
+    using attr_t = unsigned int;
+#endif
+
     Archiver();
     ~Archiver();
 
@@ -34,13 +34,13 @@ public:
 private:
     void insertFile(std::ofstream& archiveStream, const fs::path& filePath) const;
     void insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
-    DWORD getObjectAttributes(const char* path) const;
-    BOOL setObjectAttributes(const char* path, const DWORD& attributes) const;
+    int getObjectAttributes(const char* path, attr_t* attributes) const;
+    int setObjectAttributes(const char* path, const attr_t& attributes) const;
 
     // TODO: objList sorting function: folder1, it's files, folder2, it's files, etc.
 
     std::string m_sRootPath{};
-    static const int isDirFlag = 1;
+    static const int isDirFlag = 1; // TODO: Get rid of this crutch
 };
 
 #endif // ARCHIVER_H

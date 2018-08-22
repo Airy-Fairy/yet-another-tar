@@ -3,6 +3,19 @@
 #include <fstream>
 #include <unordered_set>
 
+#ifdef WIN32
+#include <Windows.h>
+#elif __linux__
+#include <errno.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
+
+
+// TODO: Handle all the errors
+
 
 Archiver::Archiver()
 {
@@ -120,7 +133,7 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
         archiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
 
-        DWORD attributes;
+        attr_t attributes;
         archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         auto objPath = outputPath / fs::path(nameBuffer);
@@ -194,7 +207,7 @@ int Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objLi
         archiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
 
-        DWORD attributes;
+        attr_t attributes;
         archiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         // If it's a file - skip its content
@@ -286,7 +299,7 @@ int Archiver::insert(const std::string & sInputPath, const std::string & sArchiv
         oldArchiveStream.read(nameBuffer, nameLen >> 1);
         nameBuffer[nameLen >> 1] = '\0';
 
-        DWORD attributes;
+        attr_t attributes;
         oldArchiveStream.read(reinterpret_cast<char*>(&attributes), sizeof(attributes));
 
         // If current object doesn't contain in new objects - write it
@@ -359,7 +372,8 @@ void Archiver::insertFile(std::ofstream & archiveStream, const fs::path & filePa
     auto nameLen = static_cast<short>(fileName.size());
     nameLen = (nameLen << 1); // no flag
 
-    auto attributes = getObjectAttributes(sFilePath.c_str());
+    attr_t attributes;
+    auto ret = getObjectAttributes(sFilePath.c_str(), &attributes);
 
     /*
     * The order of writing a file information is following:
@@ -394,7 +408,8 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
     auto pathLen = static_cast<short>(dirName.size());
     pathLen = (pathLen << 1) | isDirFlag; // is directory flag
 
-    auto attributes = getObjectAttributes(sDirPath.c_str());
+    attr_t attributes;
+    auto ret = getObjectAttributes(sDirPath.c_str(), &attributes);
 
     /*
     * The order of writing a directory information is following:
@@ -414,17 +429,22 @@ void Archiver::insertDir(std::ofstream & archiveStream, const fs::path & dirPath
  *
  * @return     The object attributes.
  */
-DWORD Archiver::getObjectAttributes(const char * path) const
+int Archiver::getObjectAttributes(const char * path, attr_t* attributes) const
 {
-    DWORD attributes = 0;
-
 #ifdef WIN32
-    attributes = GetFileAttributes(path);
-#elif UNIX
-    // TODO
+    auto ret = GetFileAttributes(path);
+    if (ret != INVALID_FILE_ATTRIBUTES) {
+        *attributes = GetFileAttributes(path);
+    }
+#elif __linux__
+    struct stat fileStatus;
+    auto ret = stat(path, &fileStatus);
+    if (ret >= 0) {
+        *attributes = fileStatus.st_mode;
+    }
 #endif
 
-    return attributes;
+    return ret;
 }
 
 /**
@@ -435,11 +455,11 @@ DWORD Archiver::getObjectAttributes(const char * path) const
  *
  * @return     Returns the return value of corresponding attributes setting function
  */
-BOOL Archiver::setObjectAttributes(const char* path, const DWORD & attributes) const
+int Archiver::setObjectAttributes(const char* path, const attr_t & attributes) const
 {
 #ifdef WIN32
     return SetFileAttributes(path, attributes);
-#elif UNIX
-    // TODO
+#elif __linux__
+    return chmod(path, attributes);
 #endif
 }
