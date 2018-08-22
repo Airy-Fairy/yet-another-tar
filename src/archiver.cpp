@@ -138,7 +138,9 @@ int Archiver::extract(const std::string & sArchivePath, const std::string & sOut
 
         auto objPath = outputPath / fs::path(nameBuffer);
 
-        if (!isDir(attributes))
+        // If it's a directory - create directories by objPath
+        // else - read further for file content
+        if (isDir(attributes))
         {
             fs::create_directories(objPath);
         }
