@@ -44,17 +44,8 @@ int main(int argc, char** argv)
         auto archivePath = parser.getInputPath();
 
         Archiver archiver;
-        std::vector<Archiver::objInfo> objList;
-        auto ret = archiver.list(archivePath, objList);
+        auto ret = archiver.list(archivePath);
         return handleError(ret);
-
-        //for (auto obj : objList)
-        //{
-        //    if (obj.isDir)
-        //        cout << "<DIR>\t" << obj.name << endl;
-        //    else
-        //        cout << obj.size << "\t" << obj.name << endl;
-        //}
     }
     else if (action == Parser::Action::Insert)
     {

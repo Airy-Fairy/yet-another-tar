@@ -10,9 +10,6 @@
 #endif
 
 
-// TODO: Handle all the errors
-
-
 Archiver::Archiver()
 {
 }
@@ -190,7 +187,7 @@ Archiver::ErrorCode Archiver::extract(const std::string & sArchivePath, const st
  *
  * @return     0 if success and error code otherwise
  */
-Archiver::ErrorCode Archiver::list(const std::string & sArchivePath, std::vector<objInfo>& objList) const
+Archiver::ErrorCode Archiver::list(const std::string & sArchivePath) const
 {
     auto archivePath = fs::path(sArchivePath);
 
@@ -208,6 +205,8 @@ Archiver::ErrorCode Archiver::list(const std::string & sArchivePath, std::vector
     if (!archiveStream.good()) {
         return ErrorCode::IFStreamErr;
     }
+
+    std::vector<objInfo> objList;
 
     while (archiveStream.peek() != EOF)
     {
@@ -244,6 +243,8 @@ Archiver::ErrorCode Archiver::list(const std::string & sArchivePath, std::vector
     }
 
     archiveStream.close();
+
+    printObjList(objList);
 
     return ErrorCode::Success;
 }
@@ -522,4 +523,18 @@ bool Archiver::isDir(const attr_t& attributes) const
     #elif __linux__
         return static_cast<bool>(S_ISDIR(attributes));
     #endif
+}
+
+
+void Archiver::printObjList(std::vector<objInfo>& objList) const
+{
+    // TODO: sorting
+
+    for (auto obj : objList)
+    {
+        if (obj.isDir)
+            std::cout << "<DIR>\t" << obj.name << std::endl;
+        else
+            std::cout << obj.size << "\t" << obj.name << std::endl;
+    }
 }
