@@ -26,3 +26,14 @@ $ cmake ../src/
 $ make
 ```
 Now you can find **yat** in the build directory.
+
+## Usage
+In cmd/terminal:
+ `yat -axli (input_path | archive) [-o (output_path | archive)]`
+
+##### Available options:
+ - **-a**   collect input data and put it into yat archive
+ - **-x**   extract data from yat archive into output path
+ - **-l**   list yat archive data
+ - **-i**   insert data into existing yat archive
+ - **-h**   get help (these options above)
