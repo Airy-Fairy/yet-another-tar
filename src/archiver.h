@@ -9,7 +9,33 @@ namespace fs = std::experimental::filesystem;
 class Archiver
 {
 public:
-    // MAYBE TEMP
+    enum class ErrorCode
+    {
+        Success,
+        DoesNotExist,
+        IsNotArchive,
+        CreateDirErr,
+        IFStreamErr,
+        OFStreamErr,
+        GetAttrsErr,
+        SetAttrsErr
+    };
+
+#ifdef WIN32
+    using attr_t = unsigned long;
+#elif __linux__
+    using attr_t = unsigned int;
+#endif
+
+    Archiver();
+    ~Archiver();
+
+    ErrorCode archive(const std::string& sInputPath, const std::string& sArchivePath);
+    ErrorCode extract(const std::string& sArchivePath, const std::string& sOutputPath) const;
+    ErrorCode list(const std::string& sArchivePath) const;
+    ErrorCode insert(const std::string& sInputPath, const std::string& sArchivePath);
+
+private:
     struct objInfo
     {
         std::string name;
@@ -17,22 +43,14 @@ public:
         bool isDir;
     };
 
-    Archiver();
-    ~Archiver();
-
-    int archive(const std::string& sInputPath, const std::string& sArchivePath);
-    int extract(const std::string& sArchivePath, const std::string& sOutputPath) const;
-    int list(const std::string& sArchivePath, std::vector<objInfo>& objList) const;
-    int insert(const std::string& sInputPath, const std::string& sArchivePath);
-
-private:
-    void insertFile(std::ofstream& archiveStream, const fs::path& filePath) const;
-    void insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
-
-    // TODO: objList sorting function: folder1, it's files, folder2, it's files, etc.
+    ErrorCode insertFile(std::ofstream& archiveStream, const fs::path& filePath) const;
+    ErrorCode insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
+    void getObjectAttributes(const char* path, attr_t* attributes) const;
+    int setObjectAttributes(const char* path, const attr_t& attributes) const;
+    bool isDir(const attr_t& attributes) const;
+    void printObjList(std::vector<objInfo>& objList) const;
 
     std::string m_sRootPath{};
-    static const int isDirFlag = 1;
 };
 
 #endif // ARCHIVER_H
