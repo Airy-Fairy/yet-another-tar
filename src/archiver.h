@@ -45,7 +45,7 @@ private:
 
     ErrorCode insertFile(std::ofstream& archiveStream, const fs::path& filePath) const;
     ErrorCode insertDir(std::ofstream& archiveStream, const fs::path& dirPath) const;
-    int getObjectAttributes(const char* path, attr_t* attributes) const;
+    void getObjectAttributes(const char* path, attr_t* attributes) const;
     int setObjectAttributes(const char* path, const attr_t& attributes) const;
     bool isDir(const attr_t& attributes) const;
     void printObjList(std::vector<objInfo>& objList) const;

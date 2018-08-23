@@ -45,7 +45,7 @@ Archiver::ErrorCode Archiver::archive(const std::string & sInputPath, const std:
         return ErrorCode::DoesNotExist;
     }
 
-    if (!fs::exists(archivePath.parent_path())) {
+    if (!fs::exists(archivePath) && !fs::exists(archivePath.parent_path())) {
         return ErrorCode::DoesNotExist;
     }
 
@@ -59,6 +59,7 @@ Archiver::ErrorCode Archiver::archive(const std::string & sInputPath, const std:
 
     std::ofstream archiveStream(archivePath, std::ios_base::binary);
 
+    // Check stream
     if (!archiveStream.good()) {
         return ErrorCode::OFStreamErr;
     }
@@ -121,6 +122,7 @@ Archiver::ErrorCode Archiver::extract(const std::string & sArchivePath, const st
 
     std::ifstream archiveStream(archivePath, std::ios_base::binary);
 
+    // Check stream
     if (!archiveStream.good()) {
         return ErrorCode::IFStreamErr;
     }
@@ -154,9 +156,9 @@ Archiver::ErrorCode Archiver::extract(const std::string & sArchivePath, const st
 
             if (fileSize > 0)
             {
-                auto fileBuffer = new char[fileSize + 1];
+                auto fileBuffer = new char[fileSize];
                 archiveStream.read(fileBuffer, fileSize);
-                fileBuffer[fileSize] = '\0';
+                //fileBuffer[fileSize] = '\0';
 
                 outputStream.write(fileBuffer, fileSize);
 
@@ -196,12 +198,13 @@ Archiver::ErrorCode Archiver::list(const std::string & sArchivePath) const
         return ErrorCode::DoesNotExist;
     }
 
-    if (fs::is_directory(archivePath)) {
+    if (fs::is_directory(archivePath) || archivePath.extension() != fs::path(".yat")) {
         return ErrorCode::IsNotArchive;
     }
 
     std::ifstream archiveStream(archivePath, std::ios_base::binary);
 
+    // Check stream
     if (!archiveStream.good()) {
         return ErrorCode::IFStreamErr;
     }
@@ -266,7 +269,7 @@ Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::
         return ErrorCode::DoesNotExist;
     }
 
-    if (fs::exists(fs::path(sArchivePath))) {
+    if (!fs::exists(fs::path(sArchivePath))) {
         return ErrorCode::DoesNotExist;
     }
     
@@ -281,6 +284,7 @@ Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::
     std::ifstream oldArchiveStream(sArchivePath, std::ios_base::binary);
     std::ofstream newArchiveStream(sArchivePath + ".tmp", std::ios_base::binary | std::ios_base::app);
 
+    // Check streams
     if (!oldArchiveStream.good()) {
         return ErrorCode::IFStreamErr;
     }
@@ -292,14 +296,20 @@ Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::
     // Saves new object relative paths
     std::unordered_set<std::string> newObjects;
 
+    std::cout << inputPath << std::endl;
+
     // Recursive in depth traverse of the input directory
     if (fs::is_directory(inputPath))
     {
+        insertDir(newArchiveStream, inputPath);
+
         for (auto& p : fs::recursive_directory_iterator(inputPath))
         {
             // objName <- relative path, i.e. without m_sRootPath
             auto sObjPath = p.path().string();
             auto objName = sObjPath.substr(m_sRootPath.length(), sObjPath.length() - m_sRootPath.length());
+
+            std::cout << sObjPath << std::endl;
 
             if (fs::is_directory(p))
             {
@@ -352,9 +362,9 @@ Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::
                 // If file is not empty - write it's content to the new archive
                 if (fileSize > 0)
                 {
-                    auto fileBuffer = new char[fileSize + 1];
+                    auto fileBuffer = new char[fileSize];
                     oldArchiveStream.read(fileBuffer, fileSize);
-                    fileBuffer[fileSize] = '\0';
+                    //fileBuffer[fileSize] = '\0';
 
                     newArchiveStream.write(fileBuffer, fileSize);
 
@@ -393,6 +403,7 @@ Archiver::ErrorCode Archiver::insertFile(std::ofstream & archiveStream, const fs
 {
     std::ifstream inputStream(filePath, std::ios_base::binary);
 
+    // Check stream
     if (!inputStream.good()) {
         return ErrorCode::IFStreamErr;
     }
@@ -408,9 +419,9 @@ Archiver::ErrorCode Archiver::insertFile(std::ofstream & archiveStream, const fs
 
     auto nameLen = static_cast<short>(fileName.size());
 
-    attr_t attributes;
-    auto ret = getObjectAttributes(sFilePath.c_str(), &attributes);
-    if (ret != static_cast<int>(ErrorCode::Success)) {
+    attr_t attributes = 0;
+    getObjectAttributes(sFilePath.c_str(), &attributes);
+    if (attributes == 0) {
         return ErrorCode::GetAttrsErr;
     }
 
@@ -448,9 +459,9 @@ Archiver::ErrorCode Archiver::insertDir(std::ofstream & archiveStream, const fs:
 
     auto pathLen = static_cast<short>(dirName.size());
 
-    attr_t attributes;
-    auto ret = getObjectAttributes(sDirPath.c_str(), &attributes);
-    if (ret != static_cast<int>(ErrorCode::Success)) {
+    attr_t attributes = 0;
+    getObjectAttributes(sDirPath.c_str(), &attributes);
+    if (attributes == 0) {
         return ErrorCode::GetAttrsErr;
     }
 
@@ -474,7 +485,7 @@ Archiver::ErrorCode Archiver::insertDir(std::ofstream & archiveStream, const fs:
  *
  * @return     The object attributes.
  */
-int Archiver::getObjectAttributes(const char * path, attr_t* attributes) const
+void Archiver::getObjectAttributes(const char * path, attr_t* attributes) const
 {
 #ifdef WIN32
     auto ret = GetFileAttributes(path);
@@ -488,8 +499,6 @@ int Archiver::getObjectAttributes(const char * path, attr_t* attributes) const
         *attributes = fileStatus.st_mode;
     }
 #endif
-
-    return ret;
 }
 
 /**
@@ -525,10 +534,17 @@ bool Archiver::isDir(const attr_t& attributes) const
     #endif
 }
 
-
+/**
+ * @brief      Prints list of filesystem objects
+ *
+ * @param      objList  The object list
+ */
 void Archiver::printObjList(std::vector<objInfo>& objList) const
 {
-    // TODO: sorting
+    std::sort(objList.begin(), objList.end(),
+        [](const objInfo& a, const objInfo& b) {
+        return a.name < b.name;
+    });
 
     for (auto obj : objList)
     {
