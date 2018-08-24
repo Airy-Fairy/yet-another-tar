@@ -40,9 +40,9 @@ In cmd/terminal:
  - **-h**   get help (these options above)
 
 ##### Examples
- - Archive: `yat -a /input/path -o /archive/output/path`
+ - Archive: `yat -a /input/path -o /archive/output/path`  
 Without -o: `yat -a /input/path/filename` -> filename.yat
- - Extract: `yat -x /path/to/archive.yat -o /output/path`
+ - Extract: `yat -x /path/to/archive.yat -o /output/path`  
 Without -o: `yat -x /path/to/archive.yat` -> archive (directory)
  - List: `yat -l /path/to/archive.yat`
  - Insert: `yat -i /input/path -o /path/to/archive.yat`
