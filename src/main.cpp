@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     }
     else if (action == Parser::Action::Error)
     {
-        cout << "Parser error occured!" << endl << "Please, refer to help: yat -h";
+        cout << "Parser error occured!" << endl << "Please, refer to help: yat -h" << endl;
     }
 
     return 0;
