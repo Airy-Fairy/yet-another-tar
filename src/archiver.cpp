@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <unordered_set>
+#include <algorithm>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -158,7 +159,6 @@ Archiver::ErrorCode Archiver::extract(const std::string & sArchivePath, const st
             {
                 auto fileBuffer = new char[fileSize];
                 archiveStream.read(fileBuffer, fileSize);
-                //fileBuffer[fileSize] = '\0';
 
                 outputStream.write(fileBuffer, fileSize);
 
@@ -364,7 +364,6 @@ Archiver::ErrorCode Archiver::insert(const std::string & sInputPath, const std::
                 {
                     auto fileBuffer = new char[fileSize];
                     oldArchiveStream.read(fileBuffer, fileSize);
-                    //fileBuffer[fileSize] = '\0';
 
                     newArchiveStream.write(fileBuffer, fileSize);
 
