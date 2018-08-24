@@ -16,12 +16,14 @@ int main(int argc, char** argv)
 
     if (action == Parser::Action::Help)
     {
-        cout << "YAT - Yet Another Tar\n"
+        cout << "YAT - Yet Another TAR\n"
             << "Available options:\n"
             << "  -a\tcollect input data and put it into yat archive\n"
             << "  -x\textract data from yat archive into output path\n"
             << "  -l\tlist yat archive data\n"
-            << "  -i\tinsert data into existing yat archive" << endl;
+            << "  -i\tinsert data into existing yat archive\n"
+            << "  -o\toutput path or yat archive path for inserting (-i)\n"
+            << "  -h\tdisplay this help message" << endl;
     }
     else if (action == Parser::Action::Archive)
     {
